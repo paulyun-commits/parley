@@ -138,20 +138,21 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationHistory = { alpha: [], omega: [] };
     }
 
-    // Fetch available models directly from Ollama server
+    // Fetch available models via local proxy which forwards to the Ollama server specified by `s`
     async function fetchModelsFromOllama(serverUrl) {
         try {
-            const response = await fetch(`${serverUrl}/api/tags`, {
+            const proxiedUrl = `/api/tags?s=${encodeURIComponent(serverUrl)}`;
+            const response = await fetch(proxiedUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            
+
             const data = await response.json();
             // Extract model info including names and sizes from Ollama's response
             return data.models?.map(model => ({
@@ -164,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayName: defaultConfig.alpha.model
             }];
         } catch (error) {
-            console.warn('Could not fetch models from Ollama server:', serverUrl, error.message);
+            console.warn('Could not fetch models from Ollama server via proxy:', serverUrl, error.message);
             // Return default model as fallback
             return [{
                 name: defaultConfig.alpha.model,
@@ -804,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 requestBody.options.seed = options.seed;
             }
             
-            const response = await fetch(`${serverUrl}/api/chat`, {
+            const response = await fetch(`/api/chat?s=${encodeURIComponent(serverUrl)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
