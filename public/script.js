@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const noDelayCheckbox = document.getElementById('noDelayCheckbox');
     const unlimitedCheckbox = document.getElementById('unlimitedCheckbox');
     const messagesInput = document.getElementById('messagesInput');
+    // Summary buttons
+    const summarize1Button = document.getElementById('summarize1Button');
+    const summarize2Button = document.getElementById('summarize2Button');
+    // Summary modal elements
+    const summaryModal = document.getElementById('summaryModal');
+    const summaryPanel = document.getElementById('summaryPanel');
+    const summaryTitle = document.getElementById('summaryTitle');
+    const summaryContent = document.getElementById('summaryContent');
+    const summaryClose = document.getElementById('summaryClose');
     // Config panel elements
     const configModal = document.getElementById('configModal');
     const configPanel = document.getElementById('configPanel');
@@ -323,6 +332,19 @@ document.addEventListener('DOMContentLoaded', () => {
         configModal.classList.remove('show');
     }
 
+    // Summary modal functionality
+    function showSummaryModal() {
+        summaryModal.classList.add('show');
+        // Disable body scroll
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function hideSummaryModal() {
+        summaryModal.classList.remove('show');
+        // Re-enable body scroll
+        document.body.style.overflow = 'auto';
+    }
+
     // Event listeners for modal
     configToggle.addEventListener('click', showConfigModal);
     configClose.addEventListener('click', hideConfigModal);
@@ -338,6 +360,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && configModal.classList.contains('show')) {
             hideConfigModal();
+        }
+        if (e.key === 'Escape' && summaryModal.classList.contains('show')) {
+            hideSummaryModal();
+        }
+    });
+
+    // Summary modal event listeners
+    summaryClose.addEventListener('click', hideSummaryModal);
+    
+    // Close summary modal when clicking outside the panel
+    summaryModal.addEventListener('click', (e) => {
+        if (e.target === summaryModal) {
+            hideSummaryModal();
         }
     });
 
@@ -1190,6 +1225,149 @@ document.addEventListener('DOMContentLoaded', () => {
             delayInput.style.opacity = '1';
         }
     });
+
+    // Summary button handlers
+    summarize1Button.addEventListener('click', async () => {
+        await requestSummary('alpha', 1);
+    });
+
+    summarize2Button.addEventListener('click', async () => {
+        await requestSummary('omega', 2);
+    });
+
+    // Summary function
+    async function requestSummary(server, serverNumber) {
+        // Check if there are any messages in the chat history DOM
+        const chatMessages = chatHistory.children;
+        let hasConversation = false;
+        
+        for (let i = 0; i < chatMessages.length; i++) {
+            const messageEl = chatMessages[i];
+            if (messageEl.classList.contains('user') || 
+                messageEl.classList.contains('alpha') || 
+                messageEl.classList.contains('omega')) {
+                if (!messageEl.classList.contains('thinking')) {
+                    hasConversation = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!hasConversation) {
+            addMessage('No chat history available to summarize.', 'system');
+            return;
+        }
+
+        // Disable the summary button during request
+        const summaryButton = serverNumber === 1 ? summarize1Button : summarize2Button;
+        const originalText = summaryButton.textContent;
+        summaryButton.disabled = true;
+        summaryButton.textContent = '⏳ Summarizing...';
+
+        try {
+            const config = loadConfig();
+            const serverConfig = config[server];
+            
+            // Prepare the conversation history as context
+            let contextMessages = [];
+            
+            // Get all messages from the chat history DOM in chronological order
+            const allMessages = [];
+            
+            for (let i = 0; i < chatMessages.length; i++) {
+                const messageEl = chatMessages[i];
+                const contentEl = messageEl.querySelector('.content');
+                if (!contentEl) continue;
+                
+                let content = contentEl.textContent.trim();
+                let senderLabel;
+                
+                // Skip thinking messages, empty messages, and system messages
+                if (messageEl.classList.contains('thinking') || 
+                    !content || 
+                    content === '🤔 Thinking...' ||
+                    messageEl.classList.contains('system')) {
+                    continue;
+                }
+                
+                if (messageEl.classList.contains('user')) {
+                    senderLabel = 'User';
+                } else if (messageEl.classList.contains('alpha')) {
+                    senderLabel = 'Server #1';
+                } else if (messageEl.classList.contains('omega')) {
+                    senderLabel = 'Server #2';
+                } else {
+                    continue;
+                }
+                
+                allMessages.push({ sender: senderLabel, content: content });
+            }
+
+            // Format conversation for summary
+            let conversationText = "Chat History to Summarize:\n\n";
+            allMessages.forEach(msg => {
+                conversationText += `${msg.sender}: ${msg.content}\n`;
+            });
+
+            // Create summary request
+            const summaryPrompt = {
+                role: 'user',
+                content: `Please provide a concise summary of the following conversation. Focus on the main topics discussed, key points made by each participant, and any conclusions or outcomes. Keep the summary clear and organized.\n\n${conversationText}`
+            };
+
+            contextMessages.push(summaryPrompt);
+
+            // Add system message for summary
+            addMessage(`Requesting summary from ${getDisplayName(server)}...`, 'system');
+            
+            // Show the modal immediately
+            summaryTitle.textContent = `📋 Summary by ${getDisplayName(server)}`;
+            summaryContent.textContent = '⏳ Generating summary...';
+            showSummaryModal();
+            
+            // Make the API request
+            const requestBody = {
+                model: serverConfig.model,
+                messages: contextMessages,
+                stream: false,
+                options: {
+                    temperature: 0.3, // Lower temperature for more focused summaries
+                    top_k: serverConfig.options.top_k,
+                    top_p: serverConfig.options.top_p,
+                    repeat_penalty: serverConfig.options.repeat_penalty,
+                    num_ctx: serverConfig.options.num_ctx,
+                    num_predict: Math.min(1024, serverConfig.options.num_predict) // Limit summary length
+                }
+            };
+
+            const response = await fetch(`/api/chat?s=${encodeURIComponent(serverConfig.server)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const summaryText = data.message?.content || 'Unable to generate summary.';
+
+            // Display the summary in the modal
+            summaryContent.textContent = summaryText;
+            
+        } catch (error) {
+            console.error('Summary request failed:', error);
+            summaryContent.textContent = `Failed to generate summary: ${error.message}`;
+            addMessage(`Failed to generate summary: ${error.message}`, 'system');
+        } finally {
+            // Re-enable the summary button
+            summaryButton.disabled = false;
+            summaryButton.textContent = originalText;
+        }
+    }
 
     // Add initial system message
     addMessage("Send a message to start the conversation.", 'system');

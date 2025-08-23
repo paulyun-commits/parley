@@ -56,6 +56,11 @@
                             ⚡ No Delay
                         </label>
                     </div>
+                    
+                    <div class="summary-section">
+                        <button id="summarize1Button" class="summary-button">📋 Alpha's Summary</button>
+                        <button id="summarize2Button" class="summary-button">📋 Omega's Summary</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -245,6 +250,19 @@
                     </div>
                     <button type="submit" id="saveConfigButton">💾 Save</button>
                     </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Modal -->
+        <div class="summary-modal" id="summaryModal">
+            <div class="summary-panel" id="summaryPanel">
+                <div class="summary-header">
+                    <h2 id="summaryTitle">📋 Summary</h2>
+                    <button type="button" id="summaryClose" class="summary-close">×</button>
+                </div>
+                <div class="summary-content" id="summaryContent">
+                    <!-- Summary text will be inserted here -->
                 </div>
             </div>
         </div>
