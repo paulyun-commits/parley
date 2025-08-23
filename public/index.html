@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖💬 LLM Chat - Alpha vs Omega</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <!-- Marked.js for markdown parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <!-- Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Auto-Chat 🤖</h1>
+            <p>Why chat with a chatbot, when a chatbot can do it for you? 💬✨</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="chat-container">
+                <div class="chat-history" id="chatHistory">
+                    <!-- Messages will be displayed here -->
+                </div>
+                
+                <div class="input-area">
+                    <button id="configToggle" class="config-gear-button" title="Configuration">⚙️</button>
+                    <input type="text" id="messageInput" placeholder="Type a message to start the conversation... 💭" />
+                    <button id="sendButton">📤 Send</button>
+                    <button id="continueButton">▶️ Continue</button>
+                    <button id="stopButton">🛑 Stop</button>
+                    <button id="clearButton">🗑️ Clear</button>
+                </div>
+                
+                <div class="replies-control">
+                    <label for="repliesInput">🔢 Replies:</label>
+                    <input type="number" id="repliesInput" min="1" max="100" value="5" title="The number of automatic replies from the chatbots." />
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="unlimitedCheckbox" />
+                        ♾️ Unlimited
+                    </label>
+                    
+                    <div class="messages-section">
+                        <label for="messagesInput">📝 Memory:</label>
+                        <input type="number" id="messagesInput" min="1" max="1000" value="100" title="How much of the chat history that will be preserved when calling the LLM." />
+                    </div>
+                    
+                    <div class="delay-section">
+                        <label for="delayInput">⏱️ Delay (s):</label>
+                        <input type="number" id="delayInput" min="0" max="10" step="0.1" value="5.0" title="The number of seconds between messages between chatbots." />
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="noDelayCheckbox" />
+                            ⚡ No Delay
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Configuration Panel -->
+        <div class="config-modal" id="configModal">
+            <div class="config-panel" id="configPanel">
+                <div class="config-header">
+                    <h2>🔧 Configuration</h2>
+                    <button type="button" id="configClose" class="config-close">×</button>
+                </div>
+                <div class="config-content" id="configContent">
+                    <form id="configForm">
+                    <div class="config-row">
+                        <label for="alphaServer">🔗 Server #1:</label>
+                        <input type="text" id="alphaServer" value="http://alpha:11434" />
+                        <label for="alphaModel">🧠 Model:</label>
+                        <select id="alphaModel">
+                            <option>llama3.2</option>
+                        </select>
+                    </div>
+                    <div class="config-row">
+                        <label for="alphaPrompt">💬 System Prompt #1:</label>
+                        <textarea id="alphaPrompt" placeholder="e.g., You are extremely logical, but also a contrarian that always wants to argue the other side of a topic. Keep your replies short and concise. 1 sentence is best. 🤨" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="config-advanced">
+                        <!-- Token/Response Limits -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="alphaNumPredict" title="Maximum number of tokens to generate in response">🎯 Max Tokens:</label>
+                                <input type="number" id="alphaNumPredict" min="128" max="1048576" step="128" value="1024" />
+                            </div>
+                            <div>
+                                <label for="alphaNumCtx" title="Maximum context length in tokens. Higher = more conversation history retained">📜 Context Length:</label>
+                                <input type="number" id="alphaNumCtx" min="1024" max="10485760" step="1024" value="10240" />
+                            </div>
+                            <div class="restore-defaults-container">
+                                <button type="button" id="alphaRestoreDefaults" class="restore-defaults-btn">🔄 Restore Defaults</button>
+                            </div>
+                        </div>
+
+                        <!-- Sampling Controls -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="alphaSeed" title="Random seed for reproducible outputs. -1 = random seed each time">🌱 Seed:</label>
+                                <input type="number" id="alphaSeed" min="-1" max="999999" step="1" value="-1" />
+                            </div>
+                            <div>
+                                <label for="alphaTemperature" title="Controls randomness in responses. Higher = more creative/random, Lower = more focused/deterministic">🌡️ Temperature:</label>
+                                <input type="number" id="alphaTemperature" min="0" max="2" step="0.1" value="0.8" />
+                            </div>
+                        </div>
+                        <div class="config-row-small">
+                            <div>
+                                <label for="alphaTopK" title="Limits vocabulary to top K most likely tokens. Lower = more focused vocabulary">🔝 Top K:</label>
+                                <input type="number" id="alphaTopK" min="1" max="100" step="1" value="40" />
+                            </div>
+                            <div>
+                                <label for="alphaTopP" title="Nucleus sampling. Only consider tokens with cumulative probability up to P. Lower = more focused">🎯 Top P:</label>
+                                <input type="number" id="alphaTopP" min="0" max="1" step="0.05" value="0.9" />
+                            </div>
+                            <div>
+                                <label for="alphaTypicalP" title="Typical sampling parameter. Lower = more focused on typical tokens">📊 Typical P:</label>
+                                <input type="number" id="alphaTypicalP" min="0" max="1" step="0.05" value="1.0" />
+                            </div>
+                        </div>
+                                                
+                        <!-- Repetition Controls -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="alphaRepeatPenalty" title="Penalizes repetition of tokens. Higher = less repetition">🔄 Repeat Penalty:</label>
+                                <input type="number" id="alphaRepeatPenalty" min="0.1" max="2" step="0.1" value="1.1" />
+                            </div>
+                            <div>
+                                <label for="alphaPresencePenalty" title="Penalizes tokens based on their presence in the text. Positive = avoid repetition">👁️ Presence Penalty:</label>
+                                <input type="number" id="alphaPresencePenalty" min="-2" max="2" step="0.1" value="0.0" />
+                            </div>
+                            <div>
+                                <label for="alphaFrequencyPenalty" title="Penalizes tokens based on their frequency in the text. Positive = reduce repetition">📈 Frequency Penalty:</label>
+                                <input type="number" id="alphaFrequencyPenalty" min="-2" max="2" step="0.1" value="0.0" />
+                            </div>
+                        </div>
+                        
+                        <!-- Mirostat Sampling -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="alphaMirostat" title="Alternative sampling method. 0=disabled, 1=Mirostat 1.0, 2=Mirostat 2.0">🎲 Mirostat:</label>
+                                <input type="number" id="alphaMirostat" min="0" max="2" step="1" value="0" />
+                            </div>
+                            <div>
+                                <label for="alphaMirostatTau" title="Target entropy for Mirostat sampling. Controls perplexity">🎯 Mirostat Tau:</label>
+                                <input type="number" id="alphaMirostatTau" min="0" max="10" step="0.1" value="5.0" />
+                            </div>
+                            <div>
+                                <label for="alphaMirostatEta" title="Learning rate for Mirostat algorithm. Controls adaptation speed">⚡ Mirostat Eta:</label>
+                                <input type="number" id="alphaMirostatEta" min="0" max="1" step="0.01" value="0.1" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label for="omegaServer">🔗 Server #2:</label>
+                        <input type="text" id="omegaServer" value="http://omega:11434" />
+                        <label for="omegaModel">🧠 Model:</label>
+                        <select id="omegaModel">
+                            <option>llama3.2</option>
+                        </select>
+                    </div>
+                    <div class="config-row">
+                        <label for="omegaPrompt">💬 System Prompt #2:</label>
+                        <textarea id="omegaPrompt" placeholder="e.g., You are extremely logical, but also a contrarian that always wants to argue the other side of a topic. Keep your replies short and concise. 1 sentence is best. 🤨" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="config-advanced">
+                        <!-- Token/Response Limits -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="omegaNumPredict" title="Maximum number of tokens to generate in response">🎯 Max Tokens:</label>
+                                <input type="number" id="omegaNumPredict" min="128" max="1048576" step="128" value="1024" />
+                            </div>
+                            <div>
+                                <label for="omegaNumCtx" title="Maximum context length in tokens. Higher = more conversation history retained">📜 Context Length:</label>
+                                <input type="number" id="omegaNumCtx" min="1024" max="10485760" step="1024" value="10240" />
+                            </div>
+                            <div class="restore-defaults-container">
+                                <button type="button" id="omegaRestoreDefaults" class="restore-defaults-btn">🔄 Restore Defaults</button>
+                            </div>
+                        </div>
+
+                        <!-- Sampling Controls -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="omegaSeed" title="Random seed for reproducible outputs. -1 = random seed each time">🌱 Seed:</label>
+                                <input type="number" id="omegaSeed" min="-1" max="999999" step="1" value="-1" />
+                            </div>
+                            <div>
+                                <label for="omegaTemperature" title="Controls randomness in responses. Higher = more creative/random, Lower = more focused/deterministic">🌡️ Temperature:</label>
+                                <input type="number" id="omegaTemperature" min="0" max="2" step="0.1" value="0.8" />
+                            </div>
+                        </div>
+                        <div class="config-row-small">
+                            <div>
+                                <label for="omegaTopK" title="Limits vocabulary to top K most likely tokens. Lower = more focused vocabulary">🔝 Top K:</label>
+                                <input type="number" id="omegaTopK" min="1" max="100" step="1" value="40" />
+                            </div>
+                            <div>
+                                <label for="omegaTopP" title="Nucleus sampling. Only consider tokens with cumulative probability up to P. Lower = more focused">🎯 Top P:</label>
+                                <input type="number" id="omegaTopP" min="0" max="1" step="0.05" value="0.9" />
+                            </div>
+                            <div>
+                                <label for="omegaTypicalP" title="Typical sampling parameter. Lower = more focused on typical tokens">📊 Typical P:</label>
+                                <input type="number" id="omegaTypicalP" min="0" max="1" step="0.05" value="1.0" />
+                            </div>
+                        </div>
+                                                
+                        <!-- Repetition Controls -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="omegaRepeatPenalty" title="Penalizes repetition of tokens. Higher = less repetition">🔄 Repeat Penalty:</label>
+                                <input type="number" id="omegaRepeatPenalty" min="0.1" max="2" step="0.1" value="1.1" />
+                            </div>
+                            <div>
+                                <label for="omegaPresencePenalty" title="Penalizes tokens based on their presence in the text. Positive = avoid repetition">👁️ Presence Penalty:</label>
+                                <input type="number" id="omegaPresencePenalty" min="-2" max="2" step="0.1" value="0.0" />
+                            </div>
+                            <div>
+                                <label for="omegaFrequencyPenalty" title="Penalizes tokens based on their frequency in the text. Positive = reduce repetition">📈 Frequency Penalty:</label>
+                                <input type="number" id="omegaFrequencyPenalty" min="-2" max="2" step="0.1" value="0.0" />
+                            </div>
+                        </div>
+                        
+                        <!-- Mirostat Sampling -->
+                        <div class="config-row-small">
+                            <div>
+                                <label for="omegaMirostat" title="Alternative sampling method. 0=disabled, 1=Mirostat 1.0, 2=Mirostat 2.0">🎲 Mirostat:</label>
+                                <input type="number" id="omegaMirostat" min="0" max="2" step="1" value="0" />
+                            </div>
+                            <div>
+                                <label for="omegaMirostatTau" title="Target entropy for Mirostat sampling. Controls perplexity">🎯 Mirostat Tau:</label>
+                                <input type="number" id="omegaMirostatTau" min="0" max="10" step="0.1" value="5.0" />
+                            </div>
+                            <div>
+                                <label for="omegaMirostatEta" title="Learning rate for Mirostat algorithm. Controls adaptation speed">⚡ Mirostat Eta:</label>
+                                <input type="number" id="omegaMirostatEta" min="0" max="1" step="0.01" value="0.1" />
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" id="saveConfigButton">💾 Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
