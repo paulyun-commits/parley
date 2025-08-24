@@ -7,6 +7,10 @@ body {
     color: #e0e0e0;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .container {
     width: 100%;
     margin: 0;
@@ -355,6 +359,14 @@ header p {
     margin-left: auto; /* Push to the right edge */
 }
 
+/* Speech Section Styles */
+.speech-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+}
+
 .summary-button {
     background: #4a4a4a;
     border: 1px solid #666;
@@ -624,6 +636,23 @@ header p {
 .config-row select:focus {
     outline: none;
     border-color: #666;
+}
+
+.config-row input[type="number"] {
+    width: 70px;
+    padding: 6px 8px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    font-size: 14px;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    text-align: center;
+}
+
+.config-row input[type="number"]:focus {
+    outline: none;
+    border-color: #666;
+    background: #222;
 }
 
 .config-advanced {

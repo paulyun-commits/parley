@@ -32,6 +32,7 @@
                     <button id="sendButton">📤 Send</button>
                     <button id="continueButton">▶️ Continue</button>
                     <button id="stopButton">🛑 Stop</button>
+                    <button id="stopSpeechButton" class="hidden">🔇 Stop Speech</button>
                     <button id="clearButton">🗑️ Clear</button>
                 </div>
                 
@@ -57,6 +58,13 @@
                         </label>
                     </div>
                     
+                     <div class="speech-section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="speechEnabledCheckbox" />
+                            🔊 Speech
+                        </label>
+                    </div>
+
                     <div class="summary-section">
                         <button id="summarize1Button" class="summary-button">📋 Alpha's Summary</button>
                         <button id="summarize2Button" class="summary-button">📋 Omega's Summary</button>
@@ -85,6 +93,16 @@
                     <div class="config-row">
                         <label for="alphaPrompt">💬 System Prompt #1:</label>
                         <textarea id="alphaPrompt" placeholder="e.g., You are extremely logical, but also a contrarian that always wants to argue the other side of a topic. Keep your replies short and concise. 1 sentence is best. 🤨" rows="2"></textarea>
+                    </div>
+                    <div class="config-row">
+                        <label for="alphaVoiceSelect">🗣️ Voice #1:</label>
+                        <select id="alphaVoiceSelect" title="Select voice for Server #1 text-to-speech">
+                            <option value="">Loading voices...</option>
+                        </select>
+                        <label for="alphaVoiceRate">📈 Rate:</label>
+                        <input type="number" id="alphaVoiceRate" min="0.1" max="3.0" step="0.1" value="1.1" title="Speech rate for Server #1 (0.1-3.0)" />
+                        <label for="alphaVoicePitch">🎵 Pitch:</label>
+                        <input type="number" id="alphaVoicePitch" min="0.0" max="2.0" step="0.1" value="1.3" title="Speech pitch for Server #1 (0.0-2.0)" />
                     </div>
                     
                     <div class="config-advanced">
@@ -172,6 +190,16 @@
                     <div class="config-row">
                         <label for="omegaPrompt">💬 System Prompt #2:</label>
                         <textarea id="omegaPrompt" placeholder="e.g., You are extremely logical, but also a contrarian that always wants to argue the other side of a topic. Keep your replies short and concise. 1 sentence is best. 🤨" rows="2"></textarea>
+                    </div>
+                    <div class="config-row">
+                        <label for="omegaVoiceSelect">🗣️ Voice #2:</label>
+                        <select id="omegaVoiceSelect" title="Select voice for Server #2 text-to-speech">
+                            <option value="">Loading voices...</option>
+                        </select>
+                        <label for="omegaVoiceRate">📈 Rate:</label>
+                        <input type="number" id="omegaVoiceRate" min="0.1" max="3.0" step="0.1" value="1.0" title="Speech rate for Server #2 (0.1-3.0)" />
+                        <label for="omegaVoicePitch">🎵 Pitch:</label>
+                        <input type="number" id="omegaVoicePitch" min="0.0" max="2.0" step="0.1" value="0.7" title="Speech pitch for Server #2 (0.0-2.0)" />
                     </div>
                     
                     <div class="config-advanced">

@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const continueButton = document.getElementById('continueButton');
     const stopButton = document.getElementById('stopButton');
     const clearButton = document.getElementById('clearButton');
+    const stopSpeechButton = document.getElementById('stopSpeechButton');
     const repliesInput = document.getElementById('repliesInput');
     const delayInput = document.getElementById('delayInput');
     const noDelayCheckbox = document.getElementById('noDelayCheckbox');
@@ -20,6 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryTitle = document.getElementById('summaryTitle');
     const summaryContent = document.getElementById('summaryContent');
     const summaryClose = document.getElementById('summaryClose');
+    // Speech controls
+    const speechEnabledCheckbox = document.getElementById('speechEnabledCheckbox');
+    const alphaVoiceSelect = document.getElementById('alphaVoiceSelect');
+    const omegaVoiceSelect = document.getElementById('omegaVoiceSelect');
+    const alphaVoiceRate = document.getElementById('alphaVoiceRate');
+    const alphaVoicePitch = document.getElementById('alphaVoicePitch');
+    const omegaVoiceRate = document.getElementById('omegaVoiceRate');
+    const omegaVoicePitch = document.getElementById('omegaVoicePitch');
     // Config panel elements
     const configModal = document.getElementById('configModal');
     const configPanel = document.getElementById('configPanel');
@@ -107,6 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 mirostat_tau: 5.0,
                 mirostat_eta: 0.1
             }
+        },
+        ui: {
+            replies: 5,
+            unlimited: false,
+            messages: 100,
+            delay: 5.0,
+            noDelay: false,
+            speechEnabled: false,
+            alphaVoice: null,
+            omegaVoice: null,
+            alphaVoiceRate: 1.1,
+            alphaVoicePitch: 1.3,
+            omegaVoiceRate: 1.0,
+            omegaVoicePitch: 0.7
         }
     };
 
@@ -126,7 +149,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadConfig() {
         const config = localStorage.getItem('ollamaConfig');
         if (config) {
-            return JSON.parse(config);
+            const parsed = JSON.parse(config);
+            // Merge with defaults to ensure all properties exist (for backward compatibility)
+            return {
+                alpha: { ...defaultConfig.alpha, ...parsed.alpha },
+                omega: { ...defaultConfig.omega, ...parsed.omega },
+                ui: { ...defaultConfig.ui, ...parsed.ui }
+            };
         }
         return { ...defaultConfig };
     }
@@ -135,6 +164,74 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveConfig(config) {
         localStorage.setItem('ollamaConfig', JSON.stringify(config));
         currentConfig = { ...config };
+    }
+
+    // Save UI preferences to current config and localStorage
+    function saveUIPreferences() {
+        const uiConfig = {
+            replies: parseInt(repliesInput.value) || defaultConfig.ui.replies,
+            unlimited: unlimitedCheckbox.checked,
+            messages: parseInt(messagesInput.value) || defaultConfig.ui.messages,
+            delay: parseFloat(delayInput.value) || defaultConfig.ui.delay,
+            noDelay: noDelayCheckbox.checked,
+            speechEnabled: speechEnabledCheckbox.checked,
+            alphaVoice: alphaVoiceSelect.value ? parseInt(alphaVoiceSelect.value) : null,
+            omegaVoice: omegaVoiceSelect.value ? parseInt(omegaVoiceSelect.value) : null,
+            alphaVoiceRate: parseFloat(alphaVoiceRate.value) || defaultConfig.ui.alphaVoiceRate,
+            alphaVoicePitch: parseFloat(alphaVoicePitch.value) || defaultConfig.ui.alphaVoicePitch,
+            omegaVoiceRate: parseFloat(omegaVoiceRate.value) || defaultConfig.ui.omegaVoiceRate,
+            omegaVoicePitch: parseFloat(omegaVoicePitch.value) || defaultConfig.ui.omegaVoicePitch
+        };
+        
+        currentConfig.ui = uiConfig;
+        saveConfig(currentConfig);
+    }
+
+    // Load UI preferences from current config
+    function loadUIPreferences() {
+        const ui = currentConfig.ui || defaultConfig.ui;
+        
+        repliesInput.value = ui.replies || defaultConfig.ui.replies;
+        unlimitedCheckbox.checked = ui.unlimited || false;
+        messagesInput.value = ui.messages || defaultConfig.ui.messages;
+        delayInput.value = ui.delay || defaultConfig.ui.delay;
+        noDelayCheckbox.checked = ui.noDelay || false;
+        speechEnabledCheckbox.checked = ui.speechEnabled || false;
+        alphaVoiceRate.value = ui.alphaVoiceRate || defaultConfig.ui.alphaVoiceRate;
+        alphaVoicePitch.value = ui.alphaVoicePitch || defaultConfig.ui.alphaVoicePitch;
+        omegaVoiceRate.value = ui.omegaVoiceRate || defaultConfig.ui.omegaVoiceRate;
+        omegaVoicePitch.value = ui.omegaVoicePitch || defaultConfig.ui.omegaVoicePitch;
+        
+        // Voice selections will be set after voices are loaded
+        if (ui.alphaVoice !== null && ui.alphaVoice !== undefined) {
+            setTimeout(() => {
+                if (availableVoices[ui.alphaVoice]) {
+                    alphaVoiceSelect.value = ui.alphaVoice;
+                    selectedAlphaVoice = availableVoices[ui.alphaVoice];
+                }
+            }, 100);
+        }
+        
+        if (ui.omegaVoice !== null && ui.omegaVoice !== undefined) {
+            setTimeout(() => {
+                if (availableVoices[ui.omegaVoice]) {
+                    omegaVoiceSelect.value = ui.omegaVoice;
+                    selectedOmegaVoice = availableVoices[ui.omegaVoice];
+                }
+            }, 100);
+        }
+        
+        // Update speech enabled state
+        isSpeechEnabled = ui.speechEnabled || false;
+        
+        // Update delay input state based on preferences
+        if (isSpeechEnabled || ui.noDelay) {
+            delayInput.disabled = true;
+            delayInput.style.opacity = '0.5';
+        } else {
+            delayInput.disabled = false;
+            delayInput.style.opacity = '1';
+        }
     }
 
     // Note: Chat history is intentionally not saved to localStorage
@@ -318,10 +415,246 @@ document.addEventListener('DOMContentLoaded', () => {
         omegaMirostatEtaInput.value = omegaDefaults.mirostat_eta;
     }
 
+    // Speech synthesis system variables (declare early to avoid reference errors)
+    let speechSynthesis = window.speechSynthesis;
+    let availableVoices = [];
+    let selectedAlphaVoice = null;
+    let selectedOmegaVoice = null;
+    let isSpeechEnabled = false;
+
     // Initialize configuration and conversation history
     currentConfig = loadConfig();
     loadConversationHistory();
     populateConfigPanel(currentConfig);
+    loadUIPreferences();
+
+    // Initialize speech system
+    function initializeSpeech() {
+        if (!speechSynthesis) {
+            console.warn('Speech synthesis not supported in this browser');
+            speechEnabledCheckbox.style.display = 'none';
+            alphaVoiceSelect.style.display = 'none';
+            omegaVoiceSelect.style.display = 'none';
+            return;
+        }
+
+        // Load available voices
+        function loadVoices() {
+            availableVoices = speechSynthesis.getVoices();
+            populateVoiceSelect();
+        }
+
+        // Populate voice selection dropdown
+        function populateVoiceSelect() {
+            // Clear both selects
+            alphaVoiceSelect.innerHTML = '<option value="">Select a voice...</option>';
+            omegaVoiceSelect.innerHTML = '<option value="">Select a voice...</option>';
+            
+            availableVoices.forEach((voice, index) => {
+                // Create option for Alpha
+                const alphaOption = document.createElement('option');
+                alphaOption.value = index;
+                alphaOption.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.default) {
+                    alphaOption.textContent += ' [Default]';
+                }
+                alphaVoiceSelect.appendChild(alphaOption);
+                
+                // Create option for Omega
+                const omegaOption = document.createElement('option');
+                omegaOption.value = index;
+                omegaOption.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.default) {
+                    omegaOption.textContent += ' [Default]';
+                }
+                omegaVoiceSelect.appendChild(omegaOption);
+            });
+            
+            // Enable voice selects if voices are available
+            if (availableVoices.length > 0) {
+                alphaVoiceSelect.disabled = false;
+                omegaVoiceSelect.disabled = false;
+                
+                // Check for saved voice preferences
+                const savedAlphaVoice = currentConfig.ui?.alphaVoice;
+                const savedOmegaVoice = currentConfig.ui?.omegaVoice;
+                
+                if (savedAlphaVoice !== null && savedAlphaVoice !== undefined && availableVoices[savedAlphaVoice]) {
+                    alphaVoiceSelect.value = savedAlphaVoice;
+                    selectedAlphaVoice = availableVoices[savedAlphaVoice];
+                } else {
+                    // Auto-select different English voices for variety if no saved preference
+                    const englishVoices = availableVoices.filter(voice => 
+                        voice.lang.startsWith('en')
+                    );
+                    
+                    if (englishVoices.length >= 1) {
+                        const alphaIndex = availableVoices.indexOf(englishVoices[0]);
+                        alphaVoiceSelect.value = alphaIndex;
+                        selectedAlphaVoice = availableVoices[alphaIndex];
+                    }
+                }
+                
+                if (savedOmegaVoice !== null && savedOmegaVoice !== undefined && availableVoices[savedOmegaVoice]) {
+                    omegaVoiceSelect.value = savedOmegaVoice;
+                    selectedOmegaVoice = availableVoices[savedOmegaVoice];
+                } else {
+                    // Auto-select different English voices for variety if no saved preference
+                    const englishVoices = availableVoices.filter(voice => 
+                        voice.lang.startsWith('en')
+                    );
+                    
+                    if (englishVoices.length >= 2) {
+                        const omegaIndex = availableVoices.indexOf(englishVoices[1]);
+                        omegaVoiceSelect.value = omegaIndex;
+                        selectedOmegaVoice = availableVoices[omegaIndex];
+                    } else if (englishVoices.length === 1) {
+                        // Use the same English voice for both
+                        const voiceIndex = availableVoices.indexOf(englishVoices[0]);
+                        omegaVoiceSelect.value = voiceIndex;
+                        selectedOmegaVoice = availableVoices[voiceIndex];
+                    }
+                }
+            }
+        }
+
+        // Load voices on initialization and when they change
+        loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        // Voice selection change handlers
+        alphaVoiceSelect.addEventListener('change', function() {
+            const voiceIndex = parseInt(this.value);
+            if (!isNaN(voiceIndex) && availableVoices[voiceIndex]) {
+                selectedAlphaVoice = availableVoices[voiceIndex];
+            }
+            saveUIPreferences();
+        });
+
+        omegaVoiceSelect.addEventListener('change', function() {
+            const voiceIndex = parseInt(this.value);
+            if (!isNaN(voiceIndex) && availableVoices[voiceIndex]) {
+                selectedOmegaVoice = availableVoices[voiceIndex];
+            }
+            saveUIPreferences();
+        });
+
+        // Speech enabled checkbox handler
+        speechEnabledCheckbox.addEventListener('change', function() {
+            isSpeechEnabled = this.checked;
+            // Note: Voice selects are always enabled in config panel
+            
+            // When speech is enabled, disable delay input since we wait for speech completion
+            // When speech is disabled, re-enable delay unless no-delay checkbox is checked
+            if (this.checked) {
+                delayInput.disabled = true;
+                delayInput.style.opacity = '0.5';
+            } else {
+                delayInput.disabled = noDelayCheckbox.checked;
+                delayInput.style.opacity = noDelayCheckbox.checked ? '0.5' : '1';
+            }
+            
+            if (!this.checked) {
+                // Stop any current speech
+                speechSynthesis.cancel();
+            }
+            
+            saveUIPreferences();
+        });
+    }
+
+    // Function to speak text and return a promise that resolves when speech is complete
+    function speakText(text, senderName) {
+        return new Promise((resolve) => {
+            if (!isSpeechEnabled || !speechSynthesis) {
+                resolve(); // If speech is disabled, resolve immediately
+                return;
+            }
+
+            // Select the appropriate voice based on sender
+            let selectedVoice;
+            if (senderName === 'alpha') {
+                selectedVoice = selectedAlphaVoice;
+            } else if (senderName === 'omega') {
+                selectedVoice = selectedOmegaVoice;
+            } else {
+                resolve(); // Don't speak non-AI messages
+                return;
+            }
+
+            if (!selectedVoice) {
+                resolve(); // No voice selected for this sender
+                return;
+            }
+
+            // Cancel any current speech
+            speechSynthesis.cancel();
+
+            // Clean text for speech (remove markdown and excessive formatting)
+            const cleanText = text
+                .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
+                .replace(/\*(.*?)\*/g, '$1')     // Remove italic markdown
+                .replace(/`(.*?)`/g, '$1')       // Remove code backticks
+                .replace(/\n+/g, '. ')           // Replace line breaks with pauses
+                .replace(/\s+/g, ' ')            // Normalize whitespace
+                .trim();
+
+            if (!cleanText) {
+                resolve();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.voice = selectedVoice;
+            utterance.volume = 0.8;
+
+            // Adjust speech parameters based on sender using saved preferences
+            const ui = currentConfig.ui || defaultConfig.ui;
+            if (senderName === 'alpha') {
+                utterance.rate = ui.alphaVoiceRate || defaultConfig.ui.alphaVoiceRate;
+                utterance.pitch = ui.alphaVoicePitch || defaultConfig.ui.alphaVoicePitch;
+            } else {
+                utterance.rate = ui.omegaVoiceRate || defaultConfig.ui.omegaVoiceRate;
+                utterance.pitch = ui.omegaVoicePitch || defaultConfig.ui.omegaVoicePitch;
+            }
+            
+            // Show stop speech button when speaking starts
+            utterance.onstart = () => {
+                stopSpeechButton.classList.remove('hidden');
+            };
+
+            // Hide stop speech button and resolve promise when speaking ends
+            utterance.onend = () => {
+                stopSpeechButton.classList.add('hidden');
+                resolve();
+            };
+
+            // Handle errors and resolve
+            utterance.onerror = () => {
+                stopSpeechButton.classList.add('hidden');
+                resolve();
+            };
+
+            try {
+                speechSynthesis.speak(utterance);
+            } catch (error) {
+                console.warn('Speech synthesis error:', error);
+                stopSpeechButton.classList.add('hidden');
+                resolve();
+            }
+        });
+    }
+
+    // Stop speech button handler
+    stopSpeechButton.addEventListener('click', () => {
+        speechSynthesis.cancel();
+        stopSpeechButton.classList.add('hidden');
+    });
+
+    // Initialize speech system
+    initializeSpeech();
 
     // Modal functionality
     function showConfigModal() {
@@ -420,13 +753,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     mirostat_tau: parseFloat(omegaMirostatTauInput.value),
                     mirostat_eta: parseFloat(omegaMirostatEtaInput.value)
                 }
-            }
+            },
+            ui: currentConfig.ui || defaultConfig.ui  // Preserve existing UI config
         };
 
         saveConfig(newConfig);
         await populateConfigPanel(newConfig);
         addMessage('✅ Configuration saved successfully!', 'system');
         hideConfigModal();
+    });
+
+    // Add event listeners for UI preferences to save them automatically
+    repliesInput.addEventListener('change', saveUIPreferences);
+    unlimitedCheckbox.addEventListener('change', saveUIPreferences);
+    messagesInput.addEventListener('change', saveUIPreferences);
+    delayInput.addEventListener('change', saveUIPreferences);
+    alphaVoiceRate.addEventListener('change', saveUIPreferences);
+    alphaVoicePitch.addEventListener('change', saveUIPreferences);
+    omegaVoiceRate.addEventListener('change', saveUIPreferences);
+    omegaVoicePitch.addEventListener('change', saveUIPreferences);
+    noDelayCheckbox.addEventListener('change', function() {
+        // Update delay input state immediately
+        delayInput.disabled = this.checked || isSpeechEnabled;
+        delayInput.style.opacity = (this.checked || isSpeechEnabled) ? '0.5' : '1';
+        saveUIPreferences();
     });
 
     // Handle server input changes to refresh model lists
@@ -459,8 +809,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper function to get delay value in milliseconds
     function getDelayMs() {
-        if (noDelayCheckbox.checked) {
-            return 0; // No delay when checkbox is checked
+        if (noDelayCheckbox.checked || isSpeechEnabled) {
+            return 0; // No delay when checkbox is checked or speech is enabled
         }
         const seconds = parseFloat(delayInput.value) || 1.0; // Default to 1.0 seconds if invalid
         return Math.round(seconds * 1000); // Convert seconds to milliseconds
@@ -670,6 +1020,15 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(timestampElement);
         
         chatHistory.appendChild(messageElement);
+        
+        // Speak the message if speech is enabled and it's from AI, then wait for completion
+        if ((sender === 'alpha' || sender === 'omega') && message !== '🤔 Thinking...') {
+            // Small delay to ensure message is visible first, then speak and wait
+            setTimeout(async () => {
+                await speakText(message, sender);
+            }, 100);
+        }
+        
         chatHistory.scrollTop = chatHistory.scrollHeight;
         
         // Auto-fade system messages after 5 seconds, but only if it's not the only message
@@ -979,6 +1338,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         streamingMessageElement.insertBefore(thinkingElement, streamingContentElement);
                     }
                 }
+                
+                // Speak the completed message and wait for it to finish
+                await speakText(fullResponse, senderName);
             }
             
             return {
@@ -1053,9 +1415,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Switch to the other LLM for next turn
                 currentSender = currentSender === 'alpha' ? 'omega' : 'alpha';
                 
-                // Add a small delay between messages for readability
+                // Add a small delay between messages for readability, or wait for speech completion
                 if (i < maxReplies - 1 && isConversationActive) {
-                    await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                    if (isSpeechEnabled) {
+                        // Speech completion is already handled by awaiting the speakText promise
+                        // in the sendMessageToOllama function, so we don't need additional delay
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                    }
                 }
             } else if (!isConversationActive) {
                 addMessage('Conversation stopped by user', 'system');
@@ -1083,6 +1450,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     stopButton.addEventListener('click', () => {
         isConversationActive = false;
+        // Stop any ongoing speech
+        if (speechSynthesis) {
+            speechSynthesis.cancel();
+            stopSpeechButton.classList.add('hidden');
+        }
     });
 
     continueButton.addEventListener('click', async () => {
@@ -1150,9 +1522,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Switch to the other LLM for next turn
                 currentSender = currentSender === 'alpha' ? 'omega' : 'alpha';
                 
-                // Add a small delay between messages for readability
+                // CONTINUE BUTTON: Add a small delay between messages for readability, or wait for speech completion
                 if (i < maxReplies - 1 && isConversationActive) {
-                    await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                    if (isSpeechEnabled) {
+                        // Speech completion is already handled by awaiting the speakText promise
+                        // in the sendMessageToOllama function, so we don't need additional delay
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                    }
                 }
             } else if (!isConversationActive) {
                 addMessage('Conversation stopped by user', 'system');
@@ -1187,6 +1564,12 @@ document.addEventListener('DOMContentLoaded', () => {
             addMessage('Conversation stopped and chat cleared.', 'system');
         }
         
+        // Stop any ongoing speech
+        if (speechSynthesis) {
+            speechSynthesis.cancel();
+            stopSpeechButton.classList.add('hidden');
+        }
+        
         chatHistory.innerHTML = '';
         // Clear conversation history for both LLMs
         conversationHistory = {
@@ -1218,12 +1601,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle no-delay checkbox
     noDelayCheckbox.addEventListener('change', function() {
-        delayInput.disabled = this.checked;
-        if (this.checked) {
-            delayInput.style.opacity = '0.5';
-        } else {
-            delayInput.style.opacity = '1';
+        // Don't enable delay if speech is enabled, as speech timing takes precedence
+        if (!isSpeechEnabled) {
+            delayInput.disabled = this.checked;
+            if (this.checked) {
+                delayInput.style.opacity = '0.5';
+            } else {
+                delayInput.style.opacity = '1';
+            }
         }
+        // Note: delayInput remains disabled when speech is enabled regardless of this checkbox
     });
 
     // Summary button handlers
