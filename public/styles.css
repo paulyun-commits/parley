@@ -93,7 +93,7 @@ header p {
 
 /* Configuration Panel Styles */
 .config-panel {
-    background: #2d2d2d;
+    background: #5a5a5a;
     border-radius: 4px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     padding: 20px;
@@ -298,7 +298,7 @@ header p {
 }
 
 #repliesInput {
-    width: 60px;
+    width: 36px;
     padding: 4px 8px;
     border: 1px solid #555;
     border-radius: 3px;
@@ -314,7 +314,7 @@ header p {
 }
 
 #messagesInput {
-    width: 60px;
+    width: 48px;
     padding: 4px 8px;
     border: 1px solid #555;
     border-radius: 3px;
@@ -330,7 +330,7 @@ header p {
 }
 
 #delayInput {
-    width: 80px;
+    width: 36px;
     padding: 4px 8px;
     border: 1px solid #555;
     border-radius: 3px;
@@ -463,14 +463,14 @@ header p {
 }
 
 .delay-section {
-    margin-left: 20px; /* Big gap between Unlimited and Delay */
+    margin-left: 16px;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .messages-section {
-    margin-left: 20px; /* Big gap between No Delay and Messages */
+    margin-left: 16px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -485,6 +485,58 @@ header p {
 
 #unlimitedCheckbox, #noDelayCheckbox {
     cursor: pointer;
+}
+
+#unlimitedCheckbox:disabled, #noDelayCheckbox:disabled {
+    cursor: not-allowed;
+}
+
+.checkbox-label:has(input:disabled) {
+    cursor: not-allowed;
+}
+
+#sendButton1 {
+    padding: 10px 20px;
+    background-color: #1e3a5f;
+    color: white;
+    border: 1px solid #2196f3;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#sendButton1:hover {
+    background-color: #2196f3;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+#sendButton1:disabled {
+    background-color: #444;
+    border-color: #666;
+    cursor: not-allowed;
+}
+
+#sendButton2 {
+    padding: 10px 20px;
+    background-color: #2d4a2d;
+    color: white;
+    border: 1px solid #4caf50;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#sendButton2:hover {
+    background-color: #4caf50;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+#sendButton2:disabled {
+    background-color: #444;
+    border-color: #666;
+    cursor: not-allowed;
 }
 
 #sendButton {
@@ -580,8 +632,18 @@ header p {
     flex-shrink: 0;
     font-weight: 500;
     padding-top: 6px;
-    color: #e0e0e0;
-    font-size: 14px;
+}
+
+/* Help cursor only for labels with tooltips */
+label[title] {
+    cursor: help;
+}
+
+/* Right-justify specific voice configuration labels */
+.config-row label[for$="Model"],
+.config-row label[for$="VoiceRate"],
+.config-row label[for$="VoicePitch"] {
+    text-align: right;
 }
 
 .config-row input[type="text"] {
@@ -662,6 +724,20 @@ header p {
     border: 1px solid #444;
 }
 
+/* Indicator for advanced options that differ from default values */
+.config-advanced input.value-changed {
+    border: 2px solid #8B0000 !important;
+    box-shadow: 0 0 3px rgba(139, 0, 0, 0.5) !important;
+}
+
+/* Indicator for voice settings that differ from default values */
+.config-row input.value-changed,
+.config-row select.value-changed,
+.config-row textarea.value-changed {
+    border: 2px solid #8B0000 !important;
+    box-shadow: 0 0 3px rgba(139, 0, 0, 0.5) !important;
+}
+
 .config-panel h3 {
     color: #ffffff;
     font-size: 1.1em;
@@ -697,6 +773,11 @@ header p {
     position: relative;
 }
 
+.config-row-small button {
+    width: 80px;
+    margin-left: 4px;
+}
+
 .config-row-small input[type="number"] {
     width: 70px;
     padding: 6px 8px;
@@ -713,19 +794,57 @@ header p {
     background: #222;
 }
 
-#saveConfigButton {
-    background: #0066cc;
+#okConfigButton {
+    background-color: #666;
     color: #fff;
     border: none;
     border-radius: 3px;
     padding: 8px 20px;
     font-size: 14px;
     cursor: pointer;
-    margin-top: 6px;
 }
 
-#saveConfigButton:hover {
-    background: #0052a3;
+#okConfigButton:hover {
+    background-color: #555;
+}
+
+#configClose {
+    background-color: #666;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#configClose:hover {
+    background-color: #555;
+}
+
+/* Configuration buttons container */
+.config-buttons-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    gap: 10px;
+}
+
+.config-buttons-left {
+    display: flex;
+    gap: 8px;
+}
+
+.config-buttons-right {
+    display: flex;
+    gap: 8px;
+}
+
+.config-buttons-left .restore-defaults-btn,
+.config-buttons-left .restore-saved-btn {
+    padding: 8px 20px;
+    font-size: 14px;
 }
 
 .restore-defaults-container {
@@ -740,8 +859,8 @@ header p {
     color: #fff;
     border: none;
     border-radius: 3px;
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 8px 20px;
+    font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -755,8 +874,8 @@ header p {
     color: #fff;
     border: none;
     border-radius: 3px;
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 8px 20px;
+    font-size: 14px;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
