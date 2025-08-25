@@ -675,7 +675,7 @@ header p {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 2px;
     align-items: center;
 }
 
@@ -730,8 +730,9 @@ header p {
 
 .restore-defaults-container {
     display: flex;
-    justify-content: flex-end;
-    align-items: center;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
 }
 
 .restore-defaults-btn {
@@ -747,6 +748,21 @@ header p {
 
 .restore-defaults-btn:hover {
     background: #777;
+}
+
+.restore-saved-btn {
+    background: #4a90e2;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.restore-saved-btn:hover {
+    background: #357abd;
 }
 
 /* ChatGPT-like Markdown Styling */

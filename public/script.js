@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const unlimitedCheckbox = document.getElementById('unlimitedCheckbox');
     const messagesInput = document.getElementById('messagesInput');
     // Summary buttons
-    const summarize1Button = document.getElementById('summarize1Button');
-    const summarize2Button = document.getElementById('summarize2Button');
+    const alphaSummaryButton = document.getElementById('summarize1Button');
+    const omegaSummaryButton = document.getElementById('summarize2Button');
     // Summary modal elements
     const summaryModal = document.getElementById('summaryModal');
     const summaryPanel = document.getElementById('summaryPanel');
@@ -74,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const configForm = document.getElementById('configForm');
     const alphaRestoreDefaultsBtn = document.getElementById('alphaRestoreDefaults');
     const omegaRestoreDefaultsBtn = document.getElementById('omegaRestoreDefaults');
+    const alphaRestoreSavedBtn = document.getElementById('alphaRestoreSaved');
+    const omegaRestoreSavedBtn = document.getElementById('omegaRestoreSaved');
 
     // Default config
     const defaultConfig = {
@@ -381,38 +383,191 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Restore defaults functions
-    function restoreAlphaDefaults() {
-        const alphaDefaults = defaultConfig.alpha.options;
-        alphaTemperatureInput.value = alphaDefaults.temperature;
-        alphaTopKInput.value = alphaDefaults.top_k;
-        alphaTopPInput.value = alphaDefaults.top_p;
-        alphaRepeatPenaltyInput.value = alphaDefaults.repeat_penalty;
-        alphaSeedInput.value = alphaDefaults.seed;
-        alphaNumCtxInput.value = alphaDefaults.num_ctx;
-        alphaNumPredictInput.value = alphaDefaults.num_predict;
-        alphaTypicalPInput.value = alphaDefaults.typical_p;
-        alphaPresencePenaltyInput.value = alphaDefaults.presence_penalty;
-        alphaFrequencyPenaltyInput.value = alphaDefaults.frequency_penalty;
-        alphaMirostatInput.value = alphaDefaults.mirostat;
-        alphaMirostatTauInput.value = alphaDefaults.mirostat_tau;
-        alphaMirostatEtaInput.value = alphaDefaults.mirostat_eta;
+    async function restoreAlphaDefaults() {
+        const alphaDefaults = defaultConfig.alpha;
+        
+        // Restore server and system prompt
+        alphaServerInput.value = alphaDefaults.server;
+        alphaPromptTextarea.value = alphaDefaults.systemPrompt;
+        
+        // Restore advanced options
+        const optionDefaults = alphaDefaults.options;
+        alphaTemperatureInput.value = optionDefaults.temperature;
+        alphaTopKInput.value = optionDefaults.top_k;
+        alphaTopPInput.value = optionDefaults.top_p;
+        alphaRepeatPenaltyInput.value = optionDefaults.repeat_penalty;
+        alphaSeedInput.value = optionDefaults.seed;
+        alphaNumCtxInput.value = optionDefaults.num_ctx;
+        alphaNumPredictInput.value = optionDefaults.num_predict;
+        alphaTypicalPInput.value = optionDefaults.typical_p;
+        alphaPresencePenaltyInput.value = optionDefaults.presence_penalty;
+        alphaFrequencyPenaltyInput.value = optionDefaults.frequency_penalty;
+        alphaMirostatInput.value = optionDefaults.mirostat;
+        alphaMirostatTauInput.value = optionDefaults.mirostat_tau;
+        alphaMirostatEtaInput.value = optionDefaults.mirostat_eta;
+        
+        // Restore voice settings specific to Alpha
+        const uiDefaults = defaultConfig.ui;
+        alphaVoiceRate.value = uiDefaults.alphaVoiceRate;
+        alphaVoicePitch.value = uiDefaults.alphaVoicePitch;
+        
+        // Reset Alpha voice selection to default (no voice selected)
+        alphaVoiceSelect.value = '';
+        selectedAlphaVoice = null;
+        
+        // Save the restored UI preferences
+        saveUIPreferences();
+        
+        // Restore model selection by fetching models from default server and selecting default model
+        try {
+            const models = await fetchModelsFromOllama(alphaDefaults.server);
+            populateModelSelect(alphaModelSelect, models, alphaDefaults.model);
+        } catch (error) {
+            console.warn('Could not fetch models for Alpha defaults:', error);
+            populateModelSelect(alphaModelSelect, [{name: alphaDefaults.model, size: 0, displayName: alphaDefaults.model}], alphaDefaults.model);
+        }
     }
 
-    function restoreOmegaDefaults() {
-        const omegaDefaults = defaultConfig.omega.options;
-        omegaTemperatureInput.value = omegaDefaults.temperature;
-        omegaTopKInput.value = omegaDefaults.top_k;
-        omegaTopPInput.value = omegaDefaults.top_p;
-        omegaRepeatPenaltyInput.value = omegaDefaults.repeat_penalty;
-        omegaSeedInput.value = omegaDefaults.seed;
-        omegaNumCtxInput.value = omegaDefaults.num_ctx;
-        omegaNumPredictInput.value = omegaDefaults.num_predict;
-        omegaTypicalPInput.value = omegaDefaults.typical_p;
-        omegaPresencePenaltyInput.value = omegaDefaults.presence_penalty;
-        omegaFrequencyPenaltyInput.value = omegaDefaults.frequency_penalty;
-        omegaMirostatInput.value = omegaDefaults.mirostat;
-        omegaMirostatTauInput.value = omegaDefaults.mirostat_tau;
-        omegaMirostatEtaInput.value = omegaDefaults.mirostat_eta;
+    async function restoreOmegaDefaults() {
+        const omegaDefaults = defaultConfig.omega;
+        
+        // Restore server and system prompt
+        omegaServerInput.value = omegaDefaults.server;
+        omegaPromptTextarea.value = omegaDefaults.systemPrompt;
+        
+        // Restore advanced options
+        const optionDefaults = omegaDefaults.options;
+        omegaTemperatureInput.value = optionDefaults.temperature;
+        omegaTopKInput.value = optionDefaults.top_k;
+        omegaTopPInput.value = optionDefaults.top_p;
+        omegaRepeatPenaltyInput.value = optionDefaults.repeat_penalty;
+        omegaSeedInput.value = optionDefaults.seed;
+        omegaNumCtxInput.value = optionDefaults.num_ctx;
+        omegaNumPredictInput.value = optionDefaults.num_predict;
+        omegaTypicalPInput.value = optionDefaults.typical_p;
+        omegaPresencePenaltyInput.value = optionDefaults.presence_penalty;
+        omegaFrequencyPenaltyInput.value = optionDefaults.frequency_penalty;
+        omegaMirostatInput.value = optionDefaults.mirostat;
+        omegaMirostatTauInput.value = optionDefaults.mirostat_tau;
+        omegaMirostatEtaInput.value = optionDefaults.mirostat_eta;
+        
+        // Restore voice settings specific to Omega
+        const uiDefaults = defaultConfig.ui;
+        omegaVoiceRate.value = uiDefaults.omegaVoiceRate;
+        omegaVoicePitch.value = uiDefaults.omegaVoicePitch;
+        
+        // Reset Omega voice selection to default (no voice selected)
+        omegaVoiceSelect.value = '';
+        selectedOmegaVoice = null;
+        
+        // Save the restored UI preferences
+        saveUIPreferences();
+        
+        // Restore model selection by fetching models from default server and selecting default model
+        try {
+            const models = await fetchModelsFromOllama(omegaDefaults.server);
+            populateModelSelect(omegaModelSelect, models, omegaDefaults.model);
+        } catch (error) {
+            console.warn('Could not fetch models for Omega defaults:', error);
+            populateModelSelect(omegaModelSelect, [{name: omegaDefaults.model, size: 0, displayName: omegaDefaults.model}], omegaDefaults.model);
+        }
+    }
+
+    // Restore saved functions
+    async function restoreAlphaSaved() {
+        const savedConfig = loadConfig();
+        const alphaSaved = savedConfig.alpha;
+        
+        // Restore server and system prompt
+        alphaServerInput.value = alphaSaved.server;
+        alphaPromptTextarea.value = alphaSaved.systemPrompt;
+        
+        // Restore advanced options
+        const savedOptions = alphaSaved.options;
+        alphaTemperatureInput.value = savedOptions.temperature;
+        alphaTopKInput.value = savedOptions.top_k;
+        alphaTopPInput.value = savedOptions.top_p;
+        alphaRepeatPenaltyInput.value = savedOptions.repeat_penalty;
+        alphaSeedInput.value = savedOptions.seed;
+        alphaNumCtxInput.value = savedOptions.num_ctx;
+        alphaNumPredictInput.value = savedOptions.num_predict;
+        alphaTypicalPInput.value = savedOptions.typical_p;
+        alphaPresencePenaltyInput.value = savedOptions.presence_penalty;
+        alphaFrequencyPenaltyInput.value = savedOptions.frequency_penalty;
+        alphaMirostatInput.value = savedOptions.mirostat;
+        alphaMirostatTauInput.value = savedOptions.mirostat_tau;
+        alphaMirostatEtaInput.value = savedOptions.mirostat_eta;
+        
+        // Restore voice settings specific to Alpha
+        const uiSaved = savedConfig.ui;
+        alphaVoiceRate.value = uiSaved.alphaVoiceRate;
+        alphaVoicePitch.value = uiSaved.alphaVoicePitch;
+        
+        // Restore Alpha voice selection
+        if (uiSaved.alphaVoice !== null && uiSaved.alphaVoice !== undefined) {
+            alphaVoiceSelect.value = uiSaved.alphaVoice;
+            selectedAlphaVoice = availableVoices[uiSaved.alphaVoice] || null;
+        } else {
+            alphaVoiceSelect.value = '';
+            selectedAlphaVoice = null;
+        }
+        
+        // Restore model selection by fetching models from saved server and selecting saved model
+        try {
+            const models = await fetchModelsFromOllama(alphaSaved.server);
+            populateModelSelect(alphaModelSelect, models, alphaSaved.model);
+        } catch (error) {
+            console.warn('Could not fetch models for Alpha saved settings:', error);
+            populateModelSelect(alphaModelSelect, [{name: alphaSaved.model, size: 0, displayName: alphaSaved.model}], alphaSaved.model);
+        }
+    }
+
+    async function restoreOmegaSaved() {
+        const savedConfig = loadConfig();
+        const omegaSaved = savedConfig.omega;
+        
+        // Restore server and system prompt
+        omegaServerInput.value = omegaSaved.server;
+        omegaPromptTextarea.value = omegaSaved.systemPrompt;
+        
+        // Restore advanced options
+        const savedOptions = omegaSaved.options;
+        omegaTemperatureInput.value = savedOptions.temperature;
+        omegaTopKInput.value = savedOptions.top_k;
+        omegaTopPInput.value = savedOptions.top_p;
+        omegaRepeatPenaltyInput.value = savedOptions.repeat_penalty;
+        omegaSeedInput.value = savedOptions.seed;
+        omegaNumCtxInput.value = savedOptions.num_ctx;
+        omegaNumPredictInput.value = savedOptions.num_predict;
+        omegaTypicalPInput.value = savedOptions.typical_p;
+        omegaPresencePenaltyInput.value = savedOptions.presence_penalty;
+        omegaFrequencyPenaltyInput.value = savedOptions.frequency_penalty;
+        omegaMirostatInput.value = savedOptions.mirostat;
+        omegaMirostatTauInput.value = savedOptions.mirostat_tau;
+        omegaMirostatEtaInput.value = savedOptions.mirostat_eta;
+        
+        // Restore voice settings specific to Omega
+        const uiSaved = savedConfig.ui;
+        omegaVoiceRate.value = uiSaved.omegaVoiceRate;
+        omegaVoicePitch.value = uiSaved.omegaVoicePitch;
+        
+        // Restore Omega voice selection
+        if (uiSaved.omegaVoice !== null && uiSaved.omegaVoice !== undefined) {
+            omegaVoiceSelect.value = uiSaved.omegaVoice;
+            selectedOmegaVoice = availableVoices[uiSaved.omegaVoice] || null;
+        } else {
+            omegaVoiceSelect.value = '';
+            selectedOmegaVoice = null;
+        }
+        
+        // Restore model selection by fetching models from saved server and selecting saved model
+        try {
+            const models = await fetchModelsFromOllama(omegaSaved.server);
+            populateModelSelect(omegaModelSelect, models, omegaSaved.model);
+        } catch (error) {
+            console.warn('Could not fetch models for Omega saved settings:', error);
+            populateModelSelect(omegaModelSelect, [{name: omegaSaved.model, size: 0, displayName: omegaSaved.model}], omegaSaved.model);
+        }
     }
 
     // Speech synthesis system variables (declare early to avoid reference errors)
@@ -797,14 +952,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Restore defaults button event listeners
-    alphaRestoreDefaultsBtn.addEventListener('click', (e) => {
+    alphaRestoreDefaultsBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        restoreAlphaDefaults();
+        await restoreAlphaDefaults();
     });
 
-    omegaRestoreDefaultsBtn.addEventListener('click', (e) => {
+    omegaRestoreDefaultsBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        restoreOmegaDefaults();
+        await restoreOmegaDefaults();
+    });
+
+    // Restore saved button event listeners
+    alphaRestoreSavedBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await restoreAlphaSaved();
+    });
+
+    omegaRestoreSavedBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await restoreOmegaSaved();
     });
 
     // Helper function to get delay value in milliseconds
@@ -883,24 +1049,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Return the last maxMessages to fit within context window
         return messages.slice(-maxMessages);
-    }
-
-    // Function to add message to conversation history
-    function addToConversationHistory(senderName, role, content) {
-        if (!conversationHistory[senderName]) {
-            conversationHistory[senderName] = [];
-        }
-        conversationHistory[senderName].push({
-            role: role,
-            content: content
-        });
-        
-        // Keep only the last 20 messages per LLM to prevent context overflow
-        if (conversationHistory[senderName].length > 20) {
-            conversationHistory[senderName] = conversationHistory[senderName].slice(-20);
-        }
-        
-        // Note: Chat history is intentionally not saved to localStorage
     }
     
     // Helper function to get max replies value
@@ -1614,11 +1762,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Summary button handlers
-    summarize1Button.addEventListener('click', async () => {
+    alphaSummaryButton.addEventListener('click', async () => {
         await requestSummary('alpha', 1);
     });
 
-    summarize2Button.addEventListener('click', async () => {
+    omegaSummaryButton.addEventListener('click', async () => {
         await requestSummary('omega', 2);
     });
 
@@ -1646,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Disable the summary button during request
-        const summaryButton = serverNumber === 1 ? summarize1Button : summarize2Button;
+        const summaryButton = serverNumber === 1 ? alphaSummaryButton : omegaSummaryButton;
         const originalText = summaryButton.textContent;
         summaryButton.disabled = true;
         summaryButton.textContent = '⏳ Summarizing...';
