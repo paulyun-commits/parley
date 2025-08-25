@@ -286,7 +286,6 @@ header p {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
     padding: 8px;
     background: #2a2a2a;
     border-radius: 3px;
@@ -464,14 +463,14 @@ header p {
 }
 
 .delay-section {
-    margin-left: 30px; /* Big gap between Unlimited and Delay */
+    margin-left: 20px; /* Big gap between Unlimited and Delay */
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
 .messages-section {
-    margin-left: 30px; /* Big gap between No Delay and Messages */
+    margin-left: 20px; /* Big gap between No Delay and Messages */
     display: flex;
     align-items: center;
     gap: 10px;
