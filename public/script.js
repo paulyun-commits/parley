@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const messagesInput = document.getElementById('messagesInput');
     // Speech controls
     const speechEnabledCheckbox = document.getElementById('speechEnabledCheckbox');
+    const repeatToleranceInput = document.getElementById('repeatToleranceInput');
     const alphaVoiceSelect = document.getElementById('alphaVoiceSelect');
     const omegaVoiceSelect = document.getElementById('omegaVoiceSelect');
     const alphaVoiceRate = document.getElementById('alphaVoiceRate');
@@ -128,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delay: 5.0,
             noDelay: false,
             speechEnabled: false,
+            repeatTolerance: 8,
             alphaVoice: null,
             omegaVoice: null,
             alphaVoiceRate: 1.0,
@@ -208,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delay: parseFloat(delayInput.value) || defaultConfig.ui.delay,
             noDelay: noDelayCheckbox.checked,
             speechEnabled: speechEnabledCheckbox.checked,
+            repeatTolerance: parseInt(repeatToleranceInput.value) || defaultConfig.ui.repeatTolerance,
             alphaVoice: alphaVoiceSelect.value ? parseInt(alphaVoiceSelect.value) : null,
             omegaVoice: omegaVoiceSelect.value ? parseInt(omegaVoiceSelect.value) : null,
             alphaVoiceRate: parseFloat(alphaVoiceRate.value) || defaultConfig.ui.alphaVoiceRate,
@@ -228,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delayInput.value = ui.delay || defaultConfig.ui.delay;
         noDelayCheckbox.checked = ui.noDelay || false;
         speechEnabledCheckbox.checked = ui.speechEnabled || false;
+        repeatToleranceInput.value = ui.repeatTolerance || defaultConfig.ui.repeatTolerance;
         alphaVoiceRate.value = ui.alphaVoiceRate || defaultConfig.ui.alphaVoiceRate;
         alphaVoicePitch.value = ui.alphaVoicePitch || defaultConfig.ui.alphaVoicePitch;
         omegaVoiceRate.value = ui.omegaVoiceRate || defaultConfig.ui.omegaVoiceRate;
@@ -1208,6 +1212,13 @@ document.addEventListener('DOMContentLoaded', () => {
         saveUIPreferences();
     });
 
+    repeatToleranceInput.addEventListener('change', function() {
+        saveUIPreferences();
+    });
+    repeatToleranceInput.addEventListener('input', function() {
+        saveUIPreferences();
+    });
+
     // Handle server input changes to refresh model lists
     alphaServerInput.addEventListener('blur', async () => {
         const server = alphaServerInput.value.trim();
@@ -1602,9 +1613,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add specific system prompt for repetition check
             messages.push({
                 role: 'system',
-                content: 'You like to talk, but you also like to avoid repetitiveness in conversations.'
+                content: `You love to discuss issues, but you hate repetitiveness in
+                          conversations. You also hate it when conversations go off the
+                          rails. Do EXACTLY as the user asks and nothing more.`
             });
-            
+
             // Add conversation history 
             const history = getConversationHistory(senderName);
             messages.push(...history);
@@ -1612,7 +1625,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add the specific question
             messages.push({
                 role: 'user',
-                content: 'On a scale of 1 to 10, how repetitive has this discussion become? Just answer with the number.'
+                content: `Assess how repetitive this discussion has become or how much it has
+                          deviated from the original topic. Respond with just a single number
+                          from 1 to 10 where 10 means the most repetitive and/or off-topic.`
             });
             
             // Build request body - disable streaming for this check
@@ -1649,10 +1664,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log(`📊 Repetition check result: ${repetitionScore}/10 for ${senderName} (response: "${answer}")`);
             
-            // Stop conversation if score is over 8
-            const shouldStop = repetitionScore > 8;
+            // Stop conversation if score is over the repeat tolerance threshold
+            const repeatTolerance = parseInt(repeatToleranceInput.value) || defaultConfig.ui.repeatTolerance;
+            const shouldStop = repetitionScore > repeatTolerance;
             if (shouldStop) {
-                console.log(`🛑 Conversation deemed too repetitive (score: ${repetitionScore}/10), will stop`);
+                console.log(`🛑 Conversation deemed too repetitive (score: ${repetitionScore}/10, threshold: ${repeatTolerance}), will stop`);
             }
             return shouldStop;
 
