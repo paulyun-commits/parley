@@ -1638,11 +1638,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add the specific question
             messages.push({
                 role: 'user',
-                content: `Assess how repetitive this discussion has become. If there aren't that
-                          many messages then it can't be too repetitive right?
-                          RESPOND WITH A REPETITION SCORE RANGING FROM 1 TO 10
-                          where 10 means the most repetitive and 1 means the least.
-                          Just respond with the number please`
+                content: `Consider our most recent messages and provide a repetitiveness score raging from 1 to 10.
+                          If the conversation is very repetitive, respond with a high number like 8, 9, or 10.
+                          If the conversation isn't repetitive, respond with a low number like 3, 2, or 1.
+                          Respond with just the number please.`
             });
             
             // Build request body - disable streaming for this check
@@ -1689,11 +1688,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (shouldStop) {
                 console.log(`🛑 Conversation deemed too repetitive (score: ${repetitionScore}/10, threshold: ${repeatTolerance}), will stop`);
             }
-            return shouldStop;
+            return { shouldStop, score: repetitionScore };
 
         } catch (error) {
             console.warn('⚠️ Error checking repetitiveness:', error);
-            return false; // If check fails, continue conversation
+            return { shouldStop: false, score: 0 }; // If check fails, continue conversation
         }
     }
 
@@ -1996,11 +1995,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Check if conversation is becoming repetitive before sending the message
             if (i > 0) { // Skip check on first reply
-                const isRepetitive = await checkIfRepetitive(currentSender);
-                if (isRepetitive) {
+                const repetitionResult = await checkIfRepetitive(currentSender);
+                if (repetitionResult.shouldStop) {
                     const botDisplayName = getDisplayName(currentSender);
                     const repeatTolerance = parseInt(repeatToleranceInput.value) || defaultConfig.ui.repeatTolerance;
-                    addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said (repetitiveness score exceeded threshold of ${repeatTolerance}). Conversation stopped automatically.`, 'system', { autoFade: false });
+                    addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said`
+                        + ` (repetitiveness score of ${repetitionResult.score} exceeded tolerance of ${repeatTolerance}). `
+                        + ` Conversation stopped automatically.`, 'system', { autoFade: false });
                     break;
                 }
             }
@@ -2152,11 +2153,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Skip repetitiveness check only for the first reply after Continue button click
             if (i > 0) {
-                const isRepetitive = await checkIfRepetitive(currentSender);
-                if (isRepetitive) {
+                const repetitionResult = await checkIfRepetitive(currentSender);
+                if (repetitionResult.shouldStop) {
                     const botDisplayName = getDisplayName(currentSender);
                     const repeatTolerance = parseInt(repeatToleranceInput.value) || defaultConfig.ui.repeatTolerance;
-                    addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said (repetitiveness score exceeded threshold of ${repeatTolerance}). Conversation stopped automatically.`, 'system', { autoFade: false });
+                    addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said`
+                        + ` (repetitiveness score of ${repetitionResult.score} exceeded tolerance of ${repeatTolerance}). `
+                        + ` Conversation stopped automatically.`, 'system', { autoFade: false });
                     break;
                 }
             }
