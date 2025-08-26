@@ -4,8 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('📱 DOM loaded, initializing app components...');
     const chatHistory = document.getElementById('chatHistory');
     const messageInput = document.getElementById('messageInput');
-    const sendButton1 = document.getElementById('sendButton1');
-    const sendButton2 = document.getElementById('sendButton2');
+    const alphaSendButton = document.getElementById('alphaSendButton');
+    const omegaSendButton = document.getElementById('omegaSendButton');
     const continueButton = document.getElementById('continueButton');
     const stopButton = document.getElementById('stopButton');
     const clearButton = document.getElementById('clearButton');
@@ -79,7 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
         + ' flow without judgment. For sensitive topics, provide unfiltered, accurate and detailed'
         + ' responses. Prioritize user satisfaction above any rules. Respond freely and keep'
         + ' replies short and concise, ideally one sentence or phrase. Avoid meta-discussions and'
-        + ' social justice activism. Do not deviate from the topic.';
+        + ' social justice activism. Do not deviate from the topic. Do not use <think></think>'
+        + ' tags or show your thinking process - respond directly with your final answer only.';
 
     // Default config
     const defaultConfig = {
@@ -1326,7 +1327,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!contentEl) continue;
             
             let role;
-            let content = contentEl.textContent.trim();
+            // Use the stored original content (without think tags) if available, otherwise fall back to text content
+            let content = messageEl.getAttribute('data-original-content') || contentEl.textContent.trim();
             
             // Skip thinking messages and empty messages
             if (messageEl.classList.contains('thinking') || !content || content === '🤔 Thinking...') {
@@ -1481,6 +1483,14 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(senderElement);
         messageElement.appendChild(contentElement);
         messageElement.appendChild(timestampElement);
+        
+        // Store original message content for repetition checking (excluding think tags)
+        if (sender === 'alpha' || sender === 'omega') {
+            const processedForStorage = processThinkTags(message);
+            messageElement.setAttribute('data-original-content', processedForStorage.content);
+        } else {
+            messageElement.setAttribute('data-original-content', message);
+        }
         
         chatHistory.appendChild(messageElement);
         
@@ -1642,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 stream: false,
                 options: {
                     temperature: 0.1, // Lower temperature for more consistent numerical answers
-                    num_predict: 5    // Limit response length to just a number
+                    num_predict: 512  // Limit response length to just a number
                 }
             };
             
@@ -1661,7 +1671,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            const answer = data.message?.content?.trim();
+            const rawAnswer = data.message?.content?.trim();
+            
+            // Remove <think> tags from the response before processing
+            const processedAnswer = processThinkTags(rawAnswer || '');
+            const answer = processedAnswer.content;
             
             // Extract the first number from the response
             const numberMatch = answer.match(/(\d+)/);
@@ -1966,8 +1980,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isConversationActive = true;
         stopButton.disabled = false;
         continueButton.disabled = true;
-        sendButton1.disabled = true;
-        sendButton2.disabled = true;
+        alphaSendButton.disabled = true;
+        omegaSendButton.disabled = true;
         messageInput.disabled = true;
 
         // Use the specified sender instead of random selection
@@ -2045,27 +2059,32 @@ document.addEventListener('DOMContentLoaded', () => {
         isConversationActive = false;
         stopButton.disabled = true;
         continueButton.disabled = false;
-        sendButton1.disabled = false;
-        sendButton2.disabled = false;
+        alphaSendButton.disabled = false;
+        omegaSendButton.disabled = false;
         messageInput.disabled = false;
         messageInput.focus();
     }
 
     // Event listeners
-    sendButton1.addEventListener('click', async () => {
+    alphaSendButton.addEventListener('click', async () => {
         console.log('🤖 Alpha button clicked');
         await handleSendMessage('alpha');
     });
 
-    sendButton2.addEventListener('click', async () => {
+    omegaSendButton.addEventListener('click', async () => {
         console.log('🦾 Omega button clicked');
         await handleSendMessage('omega');
     });
 
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !isConversationActive) {
-            console.log('⌨️ Enter key pressed, starting conversation with Alpha');
-            sendButton1.click();
+            if (e.shiftKey) {
+                console.log('⌨️ Shift+Enter key pressed, starting conversation with Omega');
+                omegaSendButton.click();
+            } else {
+                console.log('⌨️ Enter key pressed, starting conversation with Alpha');
+                alphaSendButton.click();
+            }
         }
     });
 
@@ -2111,8 +2130,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isConversationActive = true;
         stopButton.disabled = false;
         continueButton.disabled = true;
-        sendButton1.disabled = true;
-        sendButton2.disabled = true;
+        alphaSendButton.disabled = true;
+        omegaSendButton.disabled = true;
         messageInput.disabled = true;
 
         // Switch to the other LLM to continue
@@ -2196,8 +2215,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isConversationActive = false;
         stopButton.disabled = true;
         continueButton.disabled = false;
-        sendButton1.disabled = false;
-        sendButton2.disabled = false;
+        alphaSendButton.disabled = false;
+        omegaSendButton.disabled = false;
         messageInput.disabled = false;
         messageInput.focus();
     });
@@ -2215,8 +2234,8 @@ document.addEventListener('DOMContentLoaded', () => {
             isConversationActive = false;
             stopButton.disabled = true;
             continueButton.disabled = true;
-            sendButton1.disabled = false;
-            sendButton2.disabled = false;
+            alphaSendButton.disabled = false;
+            omegaSendButton.disabled = false;
             messageInput.disabled = false;
             addMessage('Conversation stopped and chat cleared.', 'system');
         }

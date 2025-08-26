@@ -523,7 +523,7 @@ header p {
     cursor: not-allowed;
 }
 
-#sendButton1 {
+#alphaSendButton {
     padding: 10px 20px;
     background-color: #1e3a5f;
     color: white;
@@ -533,19 +533,19 @@ header p {
     font-size: 14px;
 }
 
-#sendButton1:hover {
+#alphaSendButton:hover {
     background-color: #2196f3;
     transform: scale(1.05);
     transition: all 0.2s ease;
 }
 
-#sendButton1:disabled {
+#alphaSendButton:disabled {
     background-color: #444;
     border-color: #666;
     cursor: not-allowed;
 }
 
-#sendButton2 {
+#omegaSendButton {
     padding: 10px 20px;
     background-color: #2d4a2d;
     color: white;
@@ -555,13 +555,13 @@ header p {
     font-size: 14px;
 }
 
-#sendButton2:hover {
+#omegaSendButton:hover {
     background-color: #4caf50;
     transform: scale(1.05);
     transition: all 0.2s ease;
 }
 
-#sendButton2:disabled {
+#omegaSendButton:disabled {
     background-color: #444;
     border-color: #666;
     cursor: not-allowed;
