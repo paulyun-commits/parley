@@ -1,5 +1,7 @@
 // 🤖✨ AI Auto-Chat: Where robots talk to robots! ✨🤖
+console.log('🚀 Parley app starting up...');
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('📱 DOM loaded, initializing app components...');
     const chatHistory = document.getElementById('chatHistory');
     const messageInput = document.getElementById('messageInput');
     const sendButton1 = document.getElementById('sendButton1');
@@ -64,8 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const omegaMirostatEtaInput = document.getElementById('omegaMirostatEta');
     
     const configForm = document.getElementById('configForm');
-    const alphaRestoreSavedBtn = document.getElementById('alphaRestoreSaved');
-    const omegaRestoreSavedBtn = document.getElementById('omegaRestoreSaved');
     const restoreDefaultsButton = document.getElementById('restoreDefaultsButton');
     const restoreSavedButton = document.getElementById('restoreSavedButton');
     const okConfigButton = document.getElementById('okConfigButton');
@@ -163,9 +163,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load config from localStorage or use default
     function loadConfig() {
+        console.log('⚙️ Loading configuration from localStorage...');
         const config = localStorage.getItem('ollamaConfig');
         if (config) {
             const parsed = JSON.parse(config);
+            console.log('✅ Configuration loaded from localStorage:', {
+                alphaServer: parsed.alpha?.server,
+                omegaServer: parsed.omega?.server,
+                alphaModel: parsed.alpha?.model,
+                omegaModel: parsed.omega?.model
+            });
             // Merge with defaults to ensure all properties exist (for backward compatibility)
             return {
                 alpha: { ...defaultConfig.alpha, ...parsed.alpha },
@@ -173,13 +180,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 ui: { ...defaultConfig.ui, ...parsed.ui }
             };
         }
+        console.log('📋 Using default configuration');
         return { ...defaultConfig };
     }
 
     // Save config to localStorage
     function saveConfig(config) {
+        console.log('💾 Saving configuration to localStorage:', {
+            alphaServer: config.alpha?.server,
+            omegaServer: config.omega?.server,
+            alphaModel: config.alpha?.model,
+            omegaModel: config.omega?.model
+        });
         localStorage.setItem('ollamaConfig', JSON.stringify(config));
         currentConfig = { ...config };
+        console.log('✅ Configuration saved successfully');
     }
 
     // Save UI preferences immediately to localStorage
@@ -269,8 +284,10 @@ document.addEventListener('DOMContentLoaded', () => {
     conversationHistory = { alpha: [], omega: [] };
     currentConfig = loadConfig();
     async function fetchModelsFromOllama(serverUrl) {
+        console.log(`🔍 Fetching models from Ollama server: ${serverUrl}`);
         try {
             const proxiedUrl = `/api/tags?s=${encodeURIComponent(serverUrl)}`;
+            console.log(`📡 Making request to: ${proxiedUrl}`);
             const response = await fetch(proxiedUrl, {
                 method: 'GET',
                 headers: {
@@ -283,8 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            // Extract model info including names and sizes from Ollama's response
-            return data.models?.map(model => ({
+            const models = data.models?.map(model => ({
                 name: model.name,
                 size: model.size || 0,
                 displayName: `${model.name} (${formatModelSize(model.size || 0)})`
@@ -293,8 +309,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 size: 0,
                 displayName: defaultConfig.alpha.model
             }];
+            
+            console.log(`✅ Successfully fetched ${models.length} models from ${serverUrl}:`, models.map(m => m.name));
+            return models;
         } catch (error) {
-            console.warn('Could not fetch models from Ollama server via proxy:', serverUrl, error.message);
+            console.warn(`⚠️ Could not fetch models from Ollama server via proxy: ${serverUrl}`, error.message);
             // Return default model as fallback
             return [{
                 name: defaultConfig.alpha.model,
@@ -708,8 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize speech system
     function initializeSpeech() {
+        console.log('🎤 Initializing speech synthesis system...');
         if (!speechSynthesis) {
-            console.warn('Speech synthesis not supported in this browser');
+            console.warn('⚠️ Speech synthesis not supported in this browser');
             speechEnabledCheckbox.style.display = 'none';
             alphaVoiceSelect.style.display = 'none';
             omegaVoiceSelect.style.display = 'none';
@@ -718,7 +738,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load available voices
         function loadVoices() {
+            console.log('🗣️ Loading available voices...');
             availableVoices = speechSynthesis.getVoices();
+            console.log(`✅ Found ${availableVoices.length} available voices:`, availableVoices.map(v => `${v.name} (${v.lang})`));
             populateVoiceSelect();
         }
 
@@ -843,6 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            console.log(`🎤 Speaking text for ${senderName}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+
             // Select the appropriate voice based on sender
             let selectedVoice;
             if (senderName === 'alpha') {
@@ -855,6 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!selectedVoice) {
+                console.warn(`⚠️ No voice selected for ${senderName}, skipping speech`);
                 resolve(); // No voice selected for this sender
                 return;
             }
@@ -908,9 +933,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
+                console.log(`🔊 Starting speech synthesis for ${senderName} using voice: ${selectedVoice.name}`);
                 speechSynthesis.speak(utterance);
             } catch (error) {
-                console.warn('Speech synthesis error:', error);
+                console.warn('⚠️ Speech synthesis error:', error);
                 stopSpeechButton.classList.add('hidden');
                 resolve();
             }
@@ -1252,8 +1278,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper function to get delay value in milliseconds
     function getDelayMs() {
-        if (noDelayCheckbox.checked || isSpeechEnabled) {
-            return 0; // No delay when checkbox is checked or speech is enabled
+        if (noDelayCheckbox.checked) {
+            return 0; // No delay when no-delay checkbox is checked
         }
         const seconds = parseFloat(delayInput.value) || 1.0; // Default to 1.0 seconds if invalid
         return Math.round(seconds * 1000); // Convert seconds to milliseconds
@@ -1564,8 +1590,84 @@ document.addEventListener('DOMContentLoaded', () => {
         return thinkingWrapper;
     }
 
+    // Function to check if conversation is becoming repetitive
+    async function checkIfRepetitive(senderName) {
+        console.log(`🔄 Checking if conversation is becoming repetitive for ${senderName}...`);
+        try {
+            const config = senderName === 'alpha' ? getActiveConfig().alpha : getActiveConfig().omega;
+            
+            // Build message array with system prompt and conversation history
+            const messages = [];
+            
+            // Add specific system prompt for repetition check
+            messages.push({
+                role: 'system',
+                content: 'You like to talk, but you also like to avoid repetitiveness in conversations.'
+            });
+            
+            // Add conversation history 
+            const history = getConversationHistory(senderName);
+            messages.push(...history);
+            
+            // Add the specific question
+            messages.push({
+                role: 'user',
+                content: 'On a scale of 1 to 10, how repetitive has this discussion become? Just answer with the number.'
+            });
+            
+            // Build request body - disable streaming for this check
+            const requestBody = {
+                model: config.model,
+                messages: messages,
+                stream: false,
+                options: {
+                    temperature: 0.1, // Lower temperature for more consistent numerical answers
+                    num_predict: 5    // Limit response length to just a number
+                }
+            };
+            
+            console.log(`📤 Sending repetitiveness check request to ${config.server} using model ${config.model}`);
+            const response = await fetch(`/api/chat?s=${encodeURIComponent(config.server)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                console.warn('⚠️ Failed to check repetitiveness, continuing conversation');
+                return false; // If check fails, continue conversation
+            }
+
+            const data = await response.json();
+            const answer = data.message?.content?.trim();
+            
+            // Extract the first number from the response
+            const numberMatch = answer.match(/(\d+)/);
+            const repetitionScore = numberMatch ? parseInt(numberMatch[1]) : 0;
+            
+            console.log(`📊 Repetition check result: ${repetitionScore}/10 for ${senderName} (response: "${answer}")`);
+            
+            // Stop conversation if score is over 8
+            const shouldStop = repetitionScore > 8;
+            if (shouldStop) {
+                console.log(`🛑 Conversation deemed too repetitive (score: ${repetitionScore}/10), will stop`);
+            }
+            return shouldStop;
+
+        } catch (error) {
+            console.warn('⚠️ Error checking repetitiveness:', error);
+            return false; // If check fails, continue conversation
+        }
+    }
+
     // Function to send message directly to Ollama server with streaming
     async function sendMessageToOllama(message, serverUrl, model, systemPrompt, senderName, addAsUserMessage = true) {
+        console.log(`💬 Sending message to ${senderName} (${model} on ${serverUrl})`);
+        console.log(`📝 Message: "${message ? message.substring(0, 100) + (message.length > 100 ? '...' : '') : '[continuing conversation]'}"`);
+        console.log(`🎭 Add as user message: ${addAsUserMessage}`);
+        
         let streamingMessageElement = null;
         let streamingContentElement = null;
         let fullResponse = '';
@@ -1582,10 +1684,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     role: 'system',
                     content: systemPrompt.trim()
                 });
+                console.log(`🎯 Using system prompt: "${systemPrompt.substring(0, 100)}${systemPrompt.length > 100 ? '...' : ''}"`);
             }
             
             // Add conversation history 
             const history = getConversationHistory(senderName);
+            console.log(`📚 Including ${history.length} conversation history messages`);
             messages.push(...history);
             
             // Add new user message if specified (for new conversations)
@@ -1594,11 +1698,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     role: 'user',
                     content: message.trim()
                 });
+                console.log('➕ Added new user message to conversation');
             }
             
             // Get advanced options for this LLM
             const config = senderName === 'alpha' ? getActiveConfig().alpha : getActiveConfig().omega;
             const options = config.options || (senderName === 'alpha' ? defaultConfig.alpha.options : defaultConfig.omega.options);
+            
+            console.log(`⚙️ Using AI options:`, {
+                temperature: options.temperature,
+                top_k: options.top_k,
+                top_p: options.top_p,
+                num_ctx: options.num_ctx,
+                num_predict: options.num_predict
+            });
             
             // Build request body with advanced options - enable streaming
             const requestBody = {
@@ -1624,8 +1737,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add seed if it's not -1 (random)
             if (options.seed !== -1) {
                 requestBody.options.seed = options.seed;
+                console.log(`🎲 Using seed: ${options.seed}`);
             }
             
+            console.log(`📤 Sending streaming request to ${serverUrl}/api/chat`);
             const response = await fetch(`/api/chat?s=${encodeURIComponent(serverUrl)}`, {
                 method: 'POST',
                 headers: {
@@ -1637,6 +1752,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+
+            console.log(`✅ Received response, starting to process stream...`);
 
             // Remove the "thinking" message and add a new streaming message
             const messages_dom = chatHistory.children;
@@ -1669,12 +1786,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             
+            console.log(`🌊 Starting to process streaming response...`);
+            let chunkCount = 0;
+            
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
                 
+                chunkCount++;
                 const chunk = decoder.decode(value);
                 const lines = chunk.split('\n').filter(line => line.trim());
+                
+                // Log every 10th chunk to avoid spam
+                if (chunkCount % 10 === 0) {
+                    console.log(`📦 Processed ${chunkCount} chunks, current response length: ${fullResponse.length} chars`);
+                }
                 
                 for (const line of lines) {
                     try {
@@ -1716,16 +1842,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         if (data.done) {
+                            console.log(`✅ Streaming completed for ${senderName}, total response: ${fullResponse.length} chars`);
                             break;
                         }
                     } catch (e) {
                         // Skip invalid JSON lines
-                        console.warn('Failed to parse JSON line:', line);
+                        console.warn('⚠️ Failed to parse JSON line:', line);
                     }
                 }
                 
                 // Check if conversation was stopped
                 if (!isConversationActive) {
+                    console.log(`⏹️ Conversation stopped by user, interrupting ${senderName} response`);
                     reader.cancel();
                     // Finalize the current response even if interrupted
                     if (streamingContentElement && fullResponse) {
@@ -1766,12 +1894,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 
+                console.log(`🎤 Preparing to speak response for ${senderName}...`);
                 // Speak the completed message and wait for it to finish
                 // Process message to remove thinking content before speaking
                 const processedForSpeech = processThinkTags(fullResponse);
                 await speakText(processedForSpeech.content, senderName);
+                console.log(`🔊 Speech completed for ${senderName}`);
             }
             
+            console.log(`✅ Message completed successfully for ${senderName}`);
             return {
                 message: fullResponse,
                 server: senderName,
@@ -1779,7 +1910,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
         } catch (error) {
-            console.error('Error sending message to Ollama:', error);
+            console.error(`❌ Error sending message to Ollama for ${senderName}:`, error);
             
             // Clean up any streaming elements
             if (streamingMessageElement) {
@@ -1801,13 +1932,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generic function to handle sending messages
     async function handleSendMessage(startingSender) {
+        console.log(`🚀 Starting conversation with ${startingSender}`);
         const message = messageInput.value.trim();
         if (!message || isConversationActive) return;
 
+        console.log(`📝 User message: "${message}"`);
         messageInput.value = '';
         addMessage(message, 'user');
 
         // Start conversation
+        console.log('🏁 Conversation started, updating UI state...');
         isConversationActive = true;
         stopButton.disabled = false;
         continueButton.disabled = true;
@@ -1819,8 +1953,22 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentSender = startingSender;
         let lastMessage = message;
         const maxReplies = getMaxReplies();
+        
+        console.log(`🎯 Max replies configured: ${maxReplies === Infinity ? 'Unlimited' : maxReplies}`);
 
         for (let i = 0; i < maxReplies && isConversationActive; i++) {
+            console.log(`💬 Turn ${i + 1}/${maxReplies === Infinity ? '∞' : maxReplies} - ${currentSender} is responding...`);
+            
+            // Check if conversation is becoming repetitive before sending the message
+            if (i > 0) { // Skip check on first reply
+                const isRepetitive = await checkIfRepetitive(currentSender);
+                if (isRepetitive) {
+                    const botDisplayName = getDisplayName(currentSender);
+                    addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said (repetitiveness score exceeded 8/10). Conversation stopped automatically.`, 'system');
+                    break;
+                }
+            }
+            
             const config = currentSender === 'alpha' ? getActiveConfig().alpha : getActiveConfig().omega;
             
             const response = await sendMessageToOllama(
@@ -1835,6 +1983,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response) {
                 // Note: With streaming, the message is already added to DOM during sendMessageToOllama
                 lastMessage = response.message;
+                console.log(`✅ ${currentSender} responded successfully (${response.message.length} chars)`);
                 
                 // If conversation was interrupted, break early
                 if (response.interrupted) {
@@ -1843,27 +1992,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Switch to the other LLM for next turn
-                currentSender = currentSender === 'alpha' ? 'omega' : 'alpha';
+                const nextSender = currentSender === 'alpha' ? 'omega' : 'alpha';
+                console.log(`🔄 Switching from ${currentSender} to ${nextSender} for next turn`);
+                currentSender = nextSender;
                 
                 // Add a small delay between messages for readability, or wait for speech completion
                 if (i < maxReplies - 1 && isConversationActive) {
+                    const delayMs = getDelayMs();
                     if (isSpeechEnabled) {
-                        // Speech completion is already handled by awaiting the speakText promise
-                        // in the sendMessageToOllama function, so we don't need additional delay
+                        console.log('🎤 Speech enabled, no additional delay needed (speech completion handles timing)');
+                    } else if (delayMs > 0) {
+                        console.log(`⏱️ Adding ${delayMs}ms delay before next message`);
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
                     } else {
-                        await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                        console.log('⚡ No delay configured, continuing immediately');
                     }
                 }
             } else if (!isConversationActive) {
                 addMessage('Conversation stopped by user', 'system');
                 break;
             } else {
+                console.error(`❌ Failed to get response from ${currentSender}, ending conversation`);
                 addMessage(`Failed to continue conversation - check ${currentSender} server connection`, 'system');
                 break;
             }
         }
 
         // Reset conversation state
+        console.log('🏁 Conversation completed, resetting UI state...');
         isConversationActive = false;
         stopButton.disabled = true;
         continueButton.disabled = false;
@@ -1875,20 +2031,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners
     sendButton1.addEventListener('click', async () => {
+        console.log('🤖 Alpha button clicked');
         await handleSendMessage('alpha');
     });
 
     sendButton2.addEventListener('click', async () => {
+        console.log('🦾 Omega button clicked');
         await handleSendMessage('omega');
     });
 
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !isConversationActive) {
+            console.log('⌨️ Enter key pressed, starting conversation with Alpha');
             sendButton1.click();
         }
     });
 
     stopButton.addEventListener('click', () => {
+        console.log('🛑 Stop button clicked, ending conversation');
         isConversationActive = false;
         // Stop any ongoing speech
         if (speechSynthesis) {
@@ -1898,6 +2058,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     continueButton.addEventListener('click', async () => {
+        console.log('▶️ Continue button clicked');
         if (isConversationActive) return;
 
         // Get the last message from either LLM to continue from
@@ -1916,11 +2077,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!lastMessage) {
+            console.log('⚠️ No previous conversation found to continue from');
             addMessage('⚠️ No previous conversation to continue from. Send a message to start a new conversation. 🚀', 'system');
             return;
         }
 
+        console.log(`📚 Continuing conversation from last ${lastSender} message`);
+
         // Start continuing the conversation
+        console.log('🏁 Starting continuation, updating UI state...');
         isConversationActive = true;
         stopButton.disabled = false;
         continueButton.disabled = true;
@@ -1930,15 +2095,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Switch to the other LLM to continue
         let currentSender = lastSender === 'alpha' ? 'omega' : 'alpha';
+        console.log(`🔄 Switching to ${currentSender} to continue conversation`);
         const maxReplies = getMaxReplies();
 
         if (maxReplies === Infinity) {
+            console.log('♾️ Starting unlimited conversation continuation');
             addMessage('Continuing unlimited conversation...', 'system');
         } else {
+            console.log(`📊 Continuing conversation for ${maxReplies} more exchanges`);
             addMessage(`Continuing conversation for ${maxReplies} more exchanges...`, 'system');
         }
 
         for (let i = 0; i < maxReplies && isConversationActive; i++) {
+            console.log(`💬 Continuation turn ${i + 1}/${maxReplies === Infinity ? '∞' : maxReplies} - ${currentSender} is responding...`);
+            
+            // Check if conversation is becoming repetitive before sending the message
+            const isRepetitive = await checkIfRepetitive(currentSender);
+            if (isRepetitive) {
+                const botDisplayName = getDisplayName(currentSender);
+                addMessage(`🔄 ${botDisplayName} decided that everything that needed to be said was said (repetitiveness score exceeded 8/10). Conversation stopped automatically.`, 'system');
+                break;
+            }
+            
             const config = currentSender === 'alpha' ? getActiveConfig().alpha : getActiveConfig().omega;
             
             const response = await sendMessageToOllama(
@@ -1953,6 +2131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response) {
                 // Note: With streaming, the message is already added to DOM during sendMessageToOllama
                 lastMessage = response.message;
+                console.log(`✅ ${currentSender} responded successfully in continuation (${response.message.length} chars)`);
                 
                 // If conversation was interrupted, break early
                 if (response.interrupted) {
@@ -1961,27 +2140,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // Switch to the other LLM for next turn
-                currentSender = currentSender === 'alpha' ? 'omega' : 'alpha';
+                const nextSender = currentSender === 'alpha' ? 'omega' : 'alpha';
+                console.log(`🔄 Switching from ${currentSender} to ${nextSender} for next continuation turn`);
+                currentSender = nextSender;
                 
                 // CONTINUE BUTTON: Add a small delay between messages for readability, or wait for speech completion
                 if (i < maxReplies - 1 && isConversationActive) {
+                    const delayMs = getDelayMs();
                     if (isSpeechEnabled) {
-                        // Speech completion is already handled by awaiting the speakText promise
-                        // in the sendMessageToOllama function, so we don't need additional delay
+                        console.log('🎤 Speech enabled, no additional delay needed (speech completion handles timing)');
+                    } else if (delayMs > 0) {
+                        console.log(`⏱️ Adding ${delayMs}ms delay before next continuation message`);
+                        await new Promise(resolve => setTimeout(resolve, delayMs));
                     } else {
-                        await new Promise(resolve => setTimeout(resolve, getDelayMs()));
+                        console.log('⚡ No delay configured, continuing immediately');
                     }
                 }
             } else if (!isConversationActive) {
                 addMessage('Conversation stopped by user', 'system');
                 break;
             } else {
+                console.error(`❌ Failed to get response from ${currentSender} during continuation, ending conversation`);
                 addMessage(`Failed to continue conversation - check ${currentSender} server connection`, 'system');
                 break;
             }
         }
 
         // Reset conversation state
+        console.log('🏁 Conversation continuation completed, resetting UI state...');
         isConversationActive = false;
         stopButton.disabled = true;
         continueButton.disabled = false;
@@ -1996,8 +2182,11 @@ document.addEventListener('DOMContentLoaded', () => {
     continueButton.disabled = true;
 
     clearButton.addEventListener('click', () => {
+        console.log('🧹 Clear button clicked');
+        
         // Stop any active conversation first
         if (isConversationActive) {
+            console.log('🛑 Stopping active conversation before clearing');
             isConversationActive = false;
             stopButton.disabled = true;
             continueButton.disabled = true;
@@ -2013,6 +2202,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopSpeechButton.classList.add('hidden');
         }
         
+        console.log('🗑️ Clearing chat history and conversation context');
         chatHistory.innerHTML = '';
         // Clear conversation history for both LLMs
         conversationHistory = {
@@ -2030,6 +2220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         messageInput.focus();
+        console.log('✅ Chat cleared successfully');
     });
 
     // Handle unlimited checkbox
@@ -2044,5 +2235,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Add initial system message
+    console.log('💬 Adding welcome message to chat');
     addMessage("Send a message to start the conversation.", 'system');
+    
+    console.log('✅ Parley app initialization complete! Ready for AI conversations.');
 });
